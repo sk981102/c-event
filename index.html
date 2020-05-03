@@ -99,7 +99,7 @@
 
             // adjust the text on the range slider
             d3.select("#nRadius-value").text(dates[ind]);
-            console.log("calling");
+            //console.log("calling");
             loadmap(dates, ind);
 
         }
@@ -107,7 +107,7 @@
         function getDate() {
             var tmp = [];
             d3.csv("https://media.githubusercontent.com/media/sk981102/sk981102.github.io/master/dates.csv", function(d) {
-                console.log(d)
+                //console.log(d)
                 d.forEach(function(i) {
                     tmp.push(i.date);
                 })
