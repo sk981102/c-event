@@ -1,0 +1,550 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Covid-19 Impact on Airtravel</title>
+    <h2>
+        <center>Covid-19 Impact on Airtravel</center>
+    </h2>
+
+
+
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Lato);
+
+        html {
+            background-color: black;
+        }
+
+        #container {
+            color: white;
+            font-size: 10;
+        }
+
+        #map {
+            margin: 0px 170px 0px;
+            width: 50%;
+        }
+
+        .rect {
+            margin: 0px 200px 0px 170px;
+            width: 50%;
+            /*            left: 1000;*/
+        }
+
+        h2 {
+            color: white;
+            margin: 15px 455px 8px;
+            font-family: helvetica;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        h3 {
+            color: white;
+            
+            font-family:Arial;
+            font-size: 1em;
+            text-align: left;
+        }
+        h4 {
+            color: white;
+            
+            font-family:Arial;
+            font-size: 1em;
+            text-align: right;
+        }
+
+        .text {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 50%;
+        }
+
+        .range1 {
+            width: 56% !important;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/topojson/1.6.20/topojson.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script>
+        var width = '150%', // width of gray SVG
+            height = '100%',
+            sizeModifier = 50,
+            hue = 0,
+            colors = {},
+            ind;
+
+        // when the input range changes update the circle 
+
+        function getData() {
+
+        }
+        var dates = getDate();
+        loadmap(dates, 0);
+
+
+        function update(nRadius) {
+            ind = nRadius;
+
+            // adjust the text on the range slider
+            d3.select("#nRadius-value").text(dates[ind]);
+            console.log("calling");
+            loadmap(dates, ind);
+
+        }
+
+        function getDate() {
+            var tmp = [];
+            d3.csv("dates.csv", function(d) {
+                d.forEach(function(i) {
+                    tmp.push(i.date);
+                })
+            })
+            //console.log(tmp)
+            return tmp;
+        }
+
+        function loadmap(dates, ind) {
+            //console.log(ind)
+            var airport;
+            d3.selectAll("#map > *").remove();
+
+            var projection = d3.geo.mercator()
+                .translate([1200, 450])
+                .scale(320);
+
+            var zoom = d3.behavior.zoom()
+                .translate([0, 0])
+                .scale(1)
+                .scaleExtent([.5, 18])
+
+            var path = d3.geo.path()
+                .projection(projection);
+
+            var svg = d3.select('#map')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+
+            // Set background color
+            svg.append('rect')
+                .attr('width', width)
+                .attr('height', height)
+                .attr('fill', '#2b2b2b')
+                .call(zoom)
+
+
+            d3.select(window).on("resize", sizeChange);
+
+            var map = svg.append('g');
+
+            // Map of earth
+            d3.json('https://unpkg.com/world-atlas@1/world/110m.json', function(json) {
+                map.selectAll('path')
+                    .data(topojson.feature(json, json.objects.countries).features)
+                    .enter()
+                    .append('path')
+                    .attr('fill', '#2b2b2b')
+                    .attr('stroke', '#b1b2b2')
+                    .attr('d', path)
+
+            });
+
+
+
+            //world data except for US
+
+            d3.csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv', function(d) {
+                var date = dates[ind]
+
+                data = d.filter(function(d) {
+                    return d['Country/Region'] != 'US'
+                })
+
+
+                //console.log(date,d[date])
+                airport = svg.append('g')
+                    .selectAll('path')
+                    .data(data)
+                    .enter()
+                    .append('circle')
+                    .attr('cx', function(d) {
+                        return projection([d.Long, d.Lat])[0]
+                    })
+                    .attr('cy', function(d) {
+                        return projection([d.Long, d.Lat])[1]
+                    })
+                    .attr('r', function(d) {
+
+                        return (1.4 * Math.log(d[date]))
+                    })
+                    .attr('fill', function(d) {
+                        return (color(d[date]))
+                    })
+                    .on('mouseover', function(d) {
+
+                        d3.select(this).attr('d', path).style('fill', 'white')
+                            //.attr('fill', '#fd0c03')
+                            .attr('r', 60)
+                            .transition()
+                            .duration(100)
+                            .attr('r', 90)
+                            .transition()
+                            .duration(200)
+                            .attr('r', 40)
+                            //.style('fill', '#ab0101' )
+                            .transition()
+                            .duration(200)
+                            .attr('r', 90)
+                            .style('fill', 'white')
+                            .transition()
+                            .duration(250)
+                            .attr('r', 40)
+                            // .style('fill', '#ab0101' )
+                            .transition()
+                            .duration(250)
+                            .attr('r', 80)
+                            .style('fill', 'white')
+                            .transition()
+                            .duration(250)
+                            .style('fill', function(d) {
+                                return color(d.Depth)
+                            })
+                            .attr('r', function(d) {
+
+                                return (Math.log(d[date]));
+                            })
+
+                        log = projection([d.Long, d.Lat])[0];
+                        lat = projection([d.Long, d.Lat])[1];
+
+                        country = d['Province/State'] + "  " + d['Country/Region'];
+                        //console.log(country)
+                        confirmed = d[date];
+
+                        drawLine(log, lat, confirmed);
+                        drawCircle(log, lat, confirmed, country, date);
+
+
+                    })
+
+                    .on('mouseout.r', function(d) {
+                        // Reset color of dot
+                        d3.select(this).attr('d', path).style('fill', function(d) {
+                                return color(d[date])
+                            })
+                            .attr('r', function(d) {
+                                return (1.3 * Math.log(d[date]))
+                            })
+                        removeLine();
+                        removeCircle();
+                    });
+
+                // Initialize map sizes
+                sizeChange();
+                return dates;
+            });
+
+
+
+            // US data
+
+            d3.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv", function(d) {
+                data = d
+                date = dates[ind]
+
+                //console.log(data)
+                airport = svg.append('g')
+                    .selectAll('path')
+                    .data(data)
+                    .enter()
+                    .append('circle')
+                    .attr('cx', function(d) {
+                        return projection([d.Long_, d.Lat])[0]
+                    })
+                    .attr('cy', function(d) {
+                        return projection([d.Long_, d.Lat])[1]
+                    })
+                    .attr('r', function(d) {
+                        //console.log( Math.log(d[date]))
+                        return (1.2 * Math.log(d[date]))
+                    })
+                    .attr('fill', function(d) {
+                        return (color(d[date]))
+                    })
+
+
+                    .on('mouseover', function(d) {
+
+                        d3.select(this).attr('d', path).style('fill', 'white')
+                            //.attr('fill', '#fd0c03')
+                            .attr('r', 60)
+                            .transition()
+                            .duration(100)
+                            .attr('r', 90)
+                            .transition()
+                            .duration(200)
+                            .attr('r', 40)
+                            //.style('fill', '#ab0101' )
+                            .transition()
+                            .duration(200)
+                            .attr('r', 90)
+                            .style('fill', 'white')
+                            .transition()
+                            .duration(250)
+                            .attr('r', 40)
+                            // .style('fill', '#ab0101' )
+                            .transition()
+                            .duration(250)
+                            .attr('r', 80)
+                            .style('fill', 'white')
+                            .transition()
+                            .duration(250)
+                            .style('fill', function(d) {
+                                return color(d.Depth)
+                            })
+                            .attr('r', function(d) {
+                                return (Math.log(d[date]))
+                            })
+
+                        log = projection([d.Long_, d.Lat])[0];
+                        lat = projection([d.Long_, d.Lat])[1];
+
+                        state = d['Combined_Key'];
+
+                        confirmed = d[date];
+
+                        drawLine(log, lat, confirmed);
+                        drawCircle(log, lat, confirmed, state, date);
+
+
+                    })
+
+                    .on('mouseout.r', function(d) {
+                        // Reset color of dot
+                        d3.select(this).attr('d', path).style('fill', function(d) {
+                                return color(d[date])
+                            })
+                            .attr('r', function(d) {
+                                return (1.2 * Math.log(d[date]))
+                            })
+                        removeLine();
+                        removeCircle();
+                    });
+
+                // Initialize map sizes
+                sizeChange();
+            });
+
+            d3.csv("combined.csv", function(d) {
+                date = dates[ind]
+                data = d.filter(function(d) {
+                    return d.date == date;
+                })
+
+                //console.log(data)
+                // Reformat the list of link. Note that columns in csv file are called long1, long2, lat1, lat2
+                var link = []
+                data.forEach(function(row) {
+                    source = [+row.origin_lat, +row.origin_long]
+                    target = [+row.dest_lat, +row.dest_long]
+                    topush = {
+                        type: "LineString",
+                        coordinates: [source, target]
+                    }
+                    link.push(topush)
+                })
+                console.log(link)
+
+                svg.append('g')
+                    .selectAll("myPath")
+                    .data(link)
+                    .enter()
+                    .append("path")
+                    .attr("d", function(d) {
+                        return path(d)
+                    })
+                    .style("fill", "none")
+                    .style("stroke", "#69b3a2")
+                    .style("stroke-width", 0.15).style("stroke-opacity", 0.3)
+                sizeChange();
+
+            });
+
+        }
+
+
+
+
+
+        // Resize map on window resize
+        function sizeChange() {
+            d3.selectAll("g").attr("transform", "scale(" + $("#container").width() / 3200 + ")");
+            $("svg").height($("#container").width() / 1.3);
+        }
+
+        function drawLine(log, lat, dep) {
+            d3.select('#map')
+                .select('svg').select('g').append('line')
+                .attr('x1', function() {
+                    return log
+                })
+                .attr('y1', function() {
+                    return lat
+                })
+                .attr('x2', function() {
+                    return log
+                })
+                .attr('y2', function() {
+                    return lat + 800
+                })
+                .style('stroke', '#2b2b2b')
+                .style('stroke-width', 0)
+                .transition()
+                .duration(500)
+                .style('stroke', '#b1b2b2')
+                .style('stroke-width', 3)
+            //console.log(lat);
+        }
+
+        function drawCircle(log, lat, confirmed, country, date) {
+            d3.select('#map')
+                .select('svg').select('g').append('circle')
+                .attr('cx', log)
+                .attr('cy', lat + 800)
+                .attr('r', 10)
+                .attr('fill', 'white')
+                .transition()
+                .duration(600)
+                .attr('r', 150)
+            d3.select('#map').select('svg').select('g').append('text')
+                .attr('fill', '#2b2b2b')
+                .transition()
+                .duration(580)
+                .text(country)
+                .attr('x', log - 100)
+                .attr('y', lat + 740)
+                .attr('fill', 'black')
+                .attr('font-size', 30)
+            d3.select('#map').select('svg').select('g').append('text')
+                .attr('fill', '#2b2b2b')
+                .transition()
+                .duration(580)
+                .text(date)
+                .attr('x', log - 55)
+                .attr('y', lat + 790)
+                .attr('fill', 'black')
+                .attr('font-size', 25)
+            d3.select('#map').select('svg').select('g').append('text')
+                .attr('fill', '#2b2b2b')
+                .transition()
+                .duration(580)
+                .text('Confirmed: ' + confirmed)
+                .attr('x', log - 100)
+                .attr('y', lat + 840)
+                .attr('fill', 'black')
+                .attr('font-size', 25)
+
+
+        }
+
+
+
+        function removeLine() {
+            d3.select('#map')
+                .select('svg').select('g').selectAll('line').remove();
+        }
+
+        function removeCircle() {
+            d3.select('#map')
+                .select('svg').select('g').selectAll('circle').remove();
+            d3.select('#map')
+                .select('svg').select('g').selectAll('text').remove();
+
+        }
+
+        function color(dep) {
+            if (dep < 50) {
+                return '#F6BDC0' //'#76b1b7'
+            }
+            if (dep < 100) {
+                return '#F1959B' //'#f6891f'
+            }
+            if (dep < 500) {
+                return '#F07470'
+            }
+            if (dep < 1000) {
+                return '#EA4C46'
+            }
+            if (dep < 15000) {
+                return '#DC1C13'
+            } else {
+                return '#ba3030'
+            }
+        }
+    </script>
+
+</head>
+
+<body>
+    <h4>
+        By Shaun (Siyeon) Kim, sk5ps@virginia.edu
+    </h4>
+    <img src="texts.png" width="700" class="text">
+    <h3>
+        On March 11th, when President Trump announced the European Travel Ban, I woke up to over a hundred text messages from my friends who were worried about my well-being. I left to Austria during the spring break of 2020 to get dental treatment and see my parents. Before I left, my friends and I joked about how I am going get "stuck" in Europe. At the time, Austria had less than 20 cases nationwide. However, that joke became my reality as the Covid-19 cases surged in Europe; I was unable to go back three days prior to my departure to United States.
+    </h3>
+    <h3>
+        There was no forseeable future. Every day was a struggle. Every day, my life changed in one way or another. My mom was originally planning to go to South Korea to see my sister who was about to deliver her first baby. At the time, South Korea was one of the top 4 high risk countries. Because of that, Austrian government entirely banned South Korean flights from coming in. All her flights were cancelled until June, so we booked another set of flight with numerous transfers, which got cancelled in another 6 hours. As situation in Europe escalated and right before the government locked down the city, my mom and I were able to fly to Korea after our 4th set of flight tickets. 
+    </h3>
+    <h3>
+        This personal experience of mine motivated me to come up with a visual tool to see the impact of Covid-19 on airtravel throughout the world by combining Covid-19 data from JHU and flights information from Openflights.org. I was only able to obtain flight data from January 1st to March 31st.
+    </h3>
+    
+    <img src="p1.svg" width="100%"/>
+    <h3>
+        The red dots indicate the Covid-19 spread. As the color gets darker and size gets bigger, it indicates there are greater number of cases. The green lines represent the airline connection on that specific date. 
+    </h3>
+    <h3>
+        
+        I chose four main events to show how the spread of Covid-19 and global airtravel interact. First event is when WHO officially announced that Covid-19 has a possibility of human-to-human transmission on January 22nd. This is a starting point for the virus and a baseline for the airtravel visualizations. As expected the world is very interconnected. The second event is when President Trump imposed Travel Ban on China. To see impact of that policy, I gave it a 3 day lag. The flights from and to China and other East Asia countries decreased significantly. The third event is when there was a EU travel ban (with a one day lag), this timeframe is especially crucial as it was also 4 days after when WHO announced Covid-19 as pandemic. The flight connection looks a lot less dense. The final date is March 31st, the last data point I had for flights. The difference between the first graph and this is quite striking.
+    </h3>
+    
+    <h3>
+        Please select a date of your interest to view the interactive map. Try hovering the country/state you are interested in with your mouse.
+    </h3>
+    <p>
+        <label for="nRadius" style="display: inline-block; width: 350px; text-align: right ;color:white;font-size:30">
+            Date: <span id="nRadius-value">…</span>
+        </label>
+        <input type="range" min="1" max="69" onchange="update(this.value)" id="nRadius" class="range1">
+
+    </p>
+
+    <div id='container'>
+
+        <div id="map">
+
+        </div>
+
+    </div>
+    
+    <h3>
+        ** This section below is specific to SARC, Data Visualization class. I am planning to delete this part after the grading period as I want to post this on my github and share it to the public!
+    </h3>
+        This project really taught me a lot technically. I did not know how to do any of the things above prior to this project. Every thing was difficult, even reading the data. I mainly used R to manipulate and clean the data.
+    <h3>
+        
+    </h3>
+    <output>
+    </output>
+
+</body></html>
